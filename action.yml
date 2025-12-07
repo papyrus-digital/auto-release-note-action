@@ -2,7 +2,7 @@ name: 'Auto Release Note'
 description: 'Generate professional release notes from your git history using AI.'
 author: 'Papyrus Digital'
 branding:
-  icon: 'edit-3'
+  icon: 'book'
   color: 'green'
 
 inputs:

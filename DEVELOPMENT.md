@@ -15,14 +15,11 @@ git commit -m "feat: initial release with compiled action"
 To publish to the Marketplace, you must tag your commit.
 
 ```bash
-# 1. Create the specific version tag
-git tag -a v1.0.0 -m "Initial release"
-
-# 2. Create the major version tag (Best Practice)
+# 1. Create the major version tag (Best Practice)
 # Users will use 'uses: papyrus-digital/auto-release-note-action@v1'
-git tag -a v1 -m "Major version 1"
+git tag -a v1 -m "Initial release v1"
 
-# 3. Push everything to GitHub
+# 2. Push everything to GitHub
 git push origin master --tags
 ```
 
