@@ -1,4 +1,4 @@
-name: 'Auto Release Note'
+name: 'Release Note Generator'
 description: 'Generate professional release notes from your git history using AI.'
 author: 'Papyrus Digital'
 branding:
