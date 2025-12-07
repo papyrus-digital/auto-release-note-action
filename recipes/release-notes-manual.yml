@@ -1,0 +1,80 @@
+name: Generate Release Notes (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      from_ref:
+        description: 'Starting reference (tag, branch, or commit)'
+        required: false
+        type: string
+      to_ref:
+        description: 'Ending reference (tag, branch, or commit) - defaults to HEAD'
+        required: false
+        type: string
+        default: 'HEAD'
+      mode:
+        description: 'Selection mode'
+        required: true
+        type: choice
+        options:
+          - tag
+          - commit
+          - branch
+      template:
+        description: 'Template name or ID'
+        required: true
+        type: string
+        default: 'Standard Changelog'
+
+jobs:
+  generate-release-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history
+
+      - name: Download Auto Release Note CLI
+        run: |
+          # Download from distribution repository
+          VERSION="latest"
+          if [ "$VERSION" == "latest" ]; then
+            # Get latest release URL
+            DOWNLOAD_URL=$(curl -s https://api.github.com/repos/papyrus-digital/auto-release-cli-distribution/releases/latest | grep "browser_download_url.*linux_amd64.tar.gz" | cut -d '"' -f 4)
+          else
+            DOWNLOAD_URL="https://github.com/papyrus-digital/auto-release-cli-distribution/releases/download/${VERSION}/arn_${VERSION}_linux_amd64.tar.gz"
+          fi
+          curl -LO "$DOWNLOAD_URL"
+          tar -xzf arn_*_linux_amd64.tar.gz
+          chmod +x arn
+          sudo mv arn /usr/local/bin/
+
+      - name: Generate Release Notes
+        env:
+          AUTO_RELEASE_TOKEN: ${{ secrets.AUTO_RELEASE_TOKEN }}
+          AUTO_RELEASE_PROJECT_ID: ${{ secrets.AUTO_RELEASE_PROJECT_ID }}
+        run: |
+          CMD="arn generate --non-interactive --mode ${{ inputs.mode }} --template '${{ inputs.template }}'"
+          
+          if [ -n "${{ inputs.from_ref }}" ]; then
+            CMD="$CMD --from ${{ inputs.from_ref }}"
+          fi
+          
+          if [ -n "${{ inputs.to_ref }}" ]; then
+            CMD="$CMD --to ${{ inputs.to_ref }}"
+          fi
+          
+          CMD="$CMD --output-url"
+          
+          echo "Running: $CMD"
+          RELEASE_URL=$(eval $CMD)
+          
+          echo "::notice title=Release Notes Generated::Release notes URL: $RELEASE_URL"
+          echo "RELEASE_URL=$RELEASE_URL" >> $GITHUB_OUTPUT
+
+      - name: Output Result
+        run: |
+          echo "✅ Release notes generated successfully!"
+          echo "URL: ${{ env.RELEASE_URL }}"
+

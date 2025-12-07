@@ -1,0 +1,73 @@
+name: Generate Release Notes (Branch-based)
+
+on:
+  push:
+    branches:
+      - 'release/**'  # Trigger on release branches
+      - 'feature/**'  # Or feature branches
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch name to generate release notes for'
+        required: true
+        type: string
+
+jobs:
+  generate-release-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download Auto Release Note CLI
+        run: |
+          # Download from distribution repository
+          VERSION="latest"
+          if [ "$VERSION" == "latest" ]; then
+            # Get latest release URL
+            DOWNLOAD_URL=$(curl -s https://api.github.com/repos/papyrus-digital/auto-release-cli-distribution/releases/latest | grep "browser_download_url.*linux_amd64.tar.gz" | cut -d '"' -f 4)
+          else
+            DOWNLOAD_URL="https://github.com/papyrus-digital/auto-release-cli-distribution/releases/download/${VERSION}/arn_${VERSION}_linux_amd64.tar.gz"
+          fi
+          curl -LO "$DOWNLOAD_URL"
+          tar -xzf arn_*_linux_amd64.tar.gz
+          chmod +x arn
+          sudo mv arn /usr/local/bin/
+
+      - name: Determine Branch
+        id: branch
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            BRANCH="${{ inputs.branch }}"
+          else
+            BRANCH="${{ github.ref_name }}"
+          fi
+          
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "Using branch: $BRANCH"
+
+      - name: Generate Release Notes
+        id: generate
+        env:
+          AUTO_RELEASE_TOKEN: ${{ secrets.AUTO_RELEASE_TOKEN }}
+          AUTO_RELEASE_PROJECT_ID: ${{ secrets.AUTO_RELEASE_PROJECT_ID }}
+        run: |
+          RELEASE_URL=$(arn generate \
+            --non-interactive \
+            --mode branch \
+            --to ${{ steps.branch.outputs.branch }} \
+            --template "Standard Changelog" \
+            --output-url)
+          
+          echo "url=$RELEASE_URL" >> $GITHUB_OUTPUT
+          echo "Release notes generated for branch ${{ steps.branch.outputs.branch }}: $RELEASE_URL"
+
+      - name: Output Result
+        run: |
+          echo "✅ Release notes generated successfully for branch: ${{ steps.branch.outputs.branch }}"
+          echo "URL: ${{ steps.generate.outputs.url }}"
+          echo ""
+          echo "You can view the release notes at the URL above or integrate them into your release process."
+

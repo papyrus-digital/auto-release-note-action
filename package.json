@@ -1,0 +1,37 @@
+{
+  "name": "auto-release-note-action",
+  "version": "1.1.0",
+  "description": "Generate AI-powered release notes inside GitHub Actions via AutoReleaseNote.com.",
+  "main": "index.js",
+  "scripts": {
+    "build": "ncc build index.js -o dist --license licenses.txt"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/papyrus-digital/auto-release-note-action.git"
+  },
+  "keywords": [
+    "github-actions",
+    "release-notes",
+    "generate",
+    "changelog",
+    "ai",
+    "autoreleasenote",
+    "automation"
+  ],
+  "author": "Papyrus Digital",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/papyrus-digital/auto-release-note-action/issues"
+  },
+  "homepage": "https://github.com/papyrus-digital/auto-release-note-action#readme",
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/exec": "^1.1.1",
+    "@actions/http-client": "^3.0.0",
+    "@actions/tool-cache": "^2.0.2"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.38.1"
+  }
+}

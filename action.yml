@@ -1,0 +1,44 @@
+name: 'Auto Release Note'
+description: 'Generate professional release notes from your git history using AI.'
+author: 'Papyrus Digital'
+branding:
+  icon: 'edit-3'
+  color: 'green'
+
+inputs:
+  api_key:
+    description: 'Your Auto Release Note API Key (Get one at https://autoreleasenote.com/auth/sign-up)'
+    required: true
+  project_id:
+    description: 'Your Project ID'
+    required: true
+  mode:
+    description: 'Generation mode (tag, commit, or branch)'
+    required: false
+    default: 'tag'
+  from_ref:
+    description: 'Optional starting ref (tag, branch, or commit) passed to the CLI via --from'
+    required: false
+  to_ref:
+    description: 'Optional ending ref (tag, branch, or commit). Defaults to the current ref when omitted.'
+    required: false
+  template:
+    description: 'The name of the template to use'
+    required: false
+    default: 'Standard Changelog'
+  output_url:
+    description: 'Set to true to output a hosted URL instead of raw markdown'
+    required: false
+    default: 'true'
+  cli_version:
+    description: 'CLI release tag to download (for example v1.2.3). Defaults to latest.'
+    required: false
+    default: 'latest'
+
+outputs:
+  release_url:
+    description: 'The URL of the generated release note'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

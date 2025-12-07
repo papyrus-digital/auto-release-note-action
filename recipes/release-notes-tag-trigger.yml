@@ -1,0 +1,85 @@
+name: Generate Release Notes on Tag
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0.0, v2.1.3
+
+jobs:
+  generate-release-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tags
+
+      - name: Download Auto Release Note CLI
+        run: |
+          # Download from distribution repository
+          VERSION="latest"  # Use latest version or specify a version like "v1.0.0"
+          if [ "$VERSION" == "latest" ]; then
+            # Get latest release URL
+            DOWNLOAD_URL=$(curl -s https://api.github.com/repos/papyrus-digital/auto-release-cli-distribution/releases/latest | grep "browser_download_url.*linux_amd64.tar.gz" | cut -d '"' -f 4)
+          else
+            DOWNLOAD_URL="https://github.com/papyrus-digital/auto-release-cli-distribution/releases/download/${VERSION}/arn_${VERSION}_linux_amd64.tar.gz"
+          fi
+          curl -LO "$DOWNLOAD_URL"
+          tar -xzf arn_*_linux_amd64.tar.gz
+          chmod +x arn
+          sudo mv arn /usr/local/bin/
+
+      - name: Get Previous Tag
+        id: get_prev_tag
+        run: |
+          CURRENT_TAG=${{ github.ref_name }}
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          
+          if [ -z "$PREV_TAG" ]; then
+            echo "prev_tag=" >> $GITHUB_OUTPUT
+            echo "has_prev=false" >> $GITHUB_OUTPUT
+          else
+            echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+            echo "has_prev=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate Release Notes
+        id: generate
+        env:
+          AUTO_RELEASE_TOKEN: ${{ secrets.AUTO_RELEASE_TOKEN }}
+          AUTO_RELEASE_PROJECT_ID: ${{ secrets.AUTO_RELEASE_PROJECT_ID }}
+        run: |
+          if [ "${{ steps.get_prev_tag.outputs.has_prev }}" == "true" ]; then
+            RELEASE_URL=$(arn generate \
+              --non-interactive \
+              --mode tag \
+              --from ${{ steps.get_prev_tag.outputs.prev_tag }} \
+              --to ${{ github.ref_name }} \
+              --template "Standard Changelog" \
+              --output-url)
+          else
+            RELEASE_URL=$(arn generate \
+              --non-interactive \
+              --mode tag \
+              --to ${{ github.ref_name }} \
+              --template "Standard Changelog" \
+              --output-url)
+          fi
+          
+          echo "url=$RELEASE_URL" >> $GITHUB_OUTPUT
+          echo "Release notes generated: $RELEASE_URL"
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            Release notes have been generated!
+            
+            View them at: ${{ steps.generate.outputs.url }}
+          draft: false
+          prerelease: false
+

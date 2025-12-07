@@ -1,0 +1,58 @@
+name: Generate Release Notes (Simple)
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0.0
+
+jobs:
+  generate-release-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tags
+
+      - name: Download Auto Release Note CLI
+        run: |
+          # Download from distribution repository
+          VERSION="latest"  # Use latest version or specify a version like "v1.0.0"
+          if [ "$VERSION" == "latest" ]; then
+            # Get latest release URL
+            DOWNLOAD_URL=$(curl -s https://api.github.com/repos/papyrus-digital/auto-release-cli-distribution/releases/latest | grep "browser_download_url.*linux_amd64.tar.gz" | cut -d '"' -f 4)
+          else
+            DOWNLOAD_URL="https://github.com/papyrus-digital/auto-release-cli-distribution/releases/download/${VERSION}/arn_${VERSION}_linux_amd64.tar.gz"
+          fi
+          curl -LO "$DOWNLOAD_URL"
+          tar -xzf arn_*_linux_amd64.tar.gz
+          chmod +x arn
+          sudo mv arn /usr/local/bin/
+
+      - name: Generate Release Notes
+        env:
+          AUTO_RELEASE_TOKEN: ${{ secrets.AUTO_RELEASE_TOKEN }}
+          AUTO_RELEASE_PROJECT_ID: ${{ secrets.AUTO_RELEASE_PROJECT_ID }}
+        run: |
+          # Get previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          
+          if [ -z "$PREV_TAG" ]; then
+            # No previous tag, generate from beginning
+            arn generate \
+              --non-interactive \
+              --mode tag \
+              --to ${{ github.ref_name }} \
+              --template "Standard Changelog" \
+              --output-url
+          else
+            # Generate between previous and current tag
+            arn generate \
+              --non-interactive \
+              --mode tag \
+              --from $PREV_TAG \
+              --to ${{ github.ref_name }} \
+              --template "Standard Changelog" \
+              --output-url
+          fi
+
